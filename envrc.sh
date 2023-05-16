@@ -4,6 +4,12 @@ envrc_name=".envrc"
 envrc_last_subshell_pwd="/tmp/envrc-subshell-last-pwd"
 
 
+_debug() { }
+_info() { }
+_success() { }
+
+if [[ '${ENVRC_VERBOSE:-0}' != '1' ]]; then
+fi
 function _debug() {
   echo "🐛 envrc: $1"
 }
@@ -20,9 +26,32 @@ function _error() {
   echo "⁉️ envrc: $1"
 }
 
-if [[ '${ENVRC_VERBOSE:-0}' != '1' ]]; then
+if [ ${ENVRC_VERBOSE:-0} -eq 1 ]; then
   _debug() { }
+  _info() { }
+elif [ ${ENVRC_VERBOSE:-0} -eq 2 ]; then
+  _debug() { }
+elif [ ${ENVRC_VERBOSE:-0} -eq 3 ]; then
+  ;
+else
+  _debug() { }
+  _info() { }
+  _success() { }
 fi
+
+function _use() {
+  local tool=$1;
+  local ver=${2:-latest};
+
+  if ! asdf shell "$tool" "$ver"; then
+    if asdf install "$tool" "$ver"; then
+      _info "Installed $tool@$ver"
+      asdf shell "$tool" "$ver"
+    else
+      _error "Failed to install $tool@$ver"
+    fi
+  fi
+}
     
 
 function _user_rel_path() {
@@ -65,6 +94,8 @@ function _load_envrc() {
     ENVRC="" \
     ENVRC_NAME="" \
     ENVRC_HASH="" \
+    ENVRC_DIR="" \
+    ENVRC_PROMPT="" \
     _ENVRC_NESTING_LEVEL=$((${_ENVRC_NESTING_LEVEL:-0}+1)) \
     $SHELL
 
@@ -86,10 +117,12 @@ function _load_envrc() {
     export ENVRC_NAME="$(basename $ENVRC_DIR)"
     export ENVRC_HASH="$(_envrc-hashsum $ENVRC)"
     if [[ "${ENVRC_DIR}" == "$HOME" ]]; then 
-      export ENVRC_NAME="🏠"
+      export ENVRC_NAME="~"
     fi
-    export ENVRC_PROMPT="📜${envrc_name}[${ENVRC_NAME}]"
+
     source "${path_}"
+
+    export ENVRC_PROMPT="${ENVRC_PROMPT:-📜${envrc_name}[${ENVRC_NAME}]}"
     _success "Loaded $(_user_rel_path $path_)"
   fi
 }
@@ -156,6 +189,15 @@ envrc() {
     hook)
       _envrc-hook $@
       ;;
+    use)
+      _use $@
+      ;;
   esac
+}
+
+
+alias use="envrc use"
+PATH_add() {
+  export PATH="$1:$PATH"
 }
 
