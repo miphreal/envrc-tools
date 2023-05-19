@@ -1,4 +1,6 @@
-#!/usr/bin/env bash
+##
+# envrc stdlib
+#
 
 envrc_name=".envrc"
 envrc_last_subshell_pwd="/tmp/envrc-subshell-last-pwd"
