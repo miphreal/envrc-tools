@@ -1,24 +1,16 @@
-#!/usr/bin/env bash
+##
+# envrc configuration
+_verbose=${ENVRC_VERBOSE:-0}
 
 envrc_name=".envrc"
 envrc_last_subshell_pwd="/tmp/envrc-subshell-last-pwd"
 
-
-function _debug() {
-  echo "🐛 envrc: $1"
-}
-
-function _info() {
-  echo "ℹ️ envrc: $1"
-}
-
-function _success() {
-  echo "✅ envrc: $1"
-}
-
-function _error() {
-  echo "⁉️ envrc: $1"
-}
+##
+# Logging
+function _debug() { echo "🐛 envrc: $1"; }
+function _info() { echo "ℹ️ envrc: $1"; }
+function _success() { echo "✅ envrc: $1"; }
+function _error() { echo "⁉️ envrc: $1"; }
 
 if [ ${ENVRC_VERBOSE:-0} -eq 1 ]; then
   _debug() { }
@@ -33,20 +25,50 @@ else
   _success() { }
 fi
 
-function _use() {
+function _log() {
+  local level=${1:-info}
+  shift 1
+  case $level in
+    debug) _debug "$@" ;;
+    info) _info "$@" ;;
+    success) _success "$@" ;;
+    error) _error "$@" ;;
+  esac
+}
+##
+
+
+##
+# envrc stdlib
+#
+
+function envrc-use() {
   local tool=$1;
   local ver=${2:-latest};
 
   if ! asdf shell "$tool" "$ver"; then
     if asdf install "$tool" "$ver"; then
-      _info "Installed $tool@$ver"
+      _log info "Installed $tool@$ver"
       asdf shell "$tool" "$ver"
     else
-      _error "Failed to install $tool@$ver"
+      _log error "Failed to install $tool@$ver"
     fi
   fi
 }
-    
+
+PATH_add() {
+  export PATH="$1:$PATH"
+}
+
+
+##
+
+
+
+
+
+
+
 
 function _user_rel_path() {
   local abs_path=${1#-}
@@ -110,7 +132,7 @@ function _load_envrc() {
     export ENVRC_DIR="$(dirname $ENVRC)"
     export ENVRC_NAME="$(basename $ENVRC_DIR)"
     export ENVRC_HASH="$(_envrc-hashsum $ENVRC)"
-    if [[ "${ENVRC_DIR}" == "$HOME" ]]; then 
+    if [[ "${ENVRC_DIR}" == "$HOME" ]]; then
       export ENVRC_NAME="~"
     fi
 
@@ -163,7 +185,7 @@ function _envrc-exit-shell() {
 function _envrc-hook() {
   hook=$1
 
-  case $hook in 
+  case $hook in
     zsh)
       add-zsh-hook precmd _envrc-run-check
       # add-zsh-hook zshexit _envrc-on-subshell-exit
@@ -172,7 +194,7 @@ function _envrc-hook() {
       # bindkey '^D' _envrc-exit-shell
       ;;
   esac
-  
+
 }
 
 function envrc() {
@@ -189,9 +211,4 @@ function envrc() {
   esac
 }
 
-
-alias use="envrc use"
-PATH_add() {
-  export PATH="$1:$PATH"
-}
 
